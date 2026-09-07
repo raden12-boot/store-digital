@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StoreKu | Katalog Produk Digital & PPOB Terpercaya</title>
+    <title>StoreKu Digital | Katalog Produk & PPOB</title>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- SheetJS untuk membaca file Excel (.xlsx) otomatis di backend/client-side script -->
+    <!-- SheetJS untuk memproses data tabel/CSV dari Google Sheets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #059669; /* Emerald 600 - Hijau elegan */
             --primary-dark: #047857; /* Emerald 700 */
             --primary-light: #ecfdf5; /* Emerald 50 */
-            --accent: #10b981;
             --text-main: #1f2937;
             --text-muted: #6b7280;
             --bg-body: #f8fafc;
@@ -100,7 +99,7 @@
         .hero {
             background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%);
             color: white;
-            padding: 50px 0;
+            padding: 48px 0;
             margin-bottom: 24px;
             border-bottom-left-radius: 24px;
             border-bottom-right-radius: 24px;
@@ -108,14 +107,14 @@
         }
 
         .hero h1 {
-            font-size: 2.1rem;
+            font-size: 2rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             letter-spacing: -0.025em;
         }
 
         .hero p {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #d1fae5;
             max-width: 600px;
             margin-bottom: 20px;
@@ -135,7 +134,7 @@
         }
 
         .stat-box .number {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 700;
         }
 
@@ -150,7 +149,7 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius);
             padding: 20px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             box-shadow: var(--shadow-sm);
             display: flex;
             flex-direction: column;
@@ -209,7 +208,7 @@
             border: 1px solid var(--border-color);
             padding: 8px 16px;
             border-radius: 20px;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             font-weight: 500;
             color: var(--text-muted);
             cursor: pointer;
@@ -428,7 +427,7 @@
                 <div class="logo-icon">⚡</div>
                 Raden Store
             </a>
-            <div class="header-badge">Raden Mufatsa</div>
+            <div class="header-badge">Google Sheets Live Sync</div>
         </div>
     </header>
 
@@ -443,8 +442,8 @@
                     <div class="label">Total Produk</div>
                 </div>
                 <div class="stat-box">
-                    <div class="number">Online</div>
-                    <div class="label">Status Sinkronisasi</div>
+                    <div class="number">Real-Time</div>
+                    <div class="label">Dari Google Sheets</div>
                 </div>
             </div>
         </div>
@@ -474,7 +473,7 @@
 
         <!-- Sub-kategori Chips Bar (Provider/Jenis Turunan) -->
         <div class="sub-category-bar" id="subCategoryBar">
-            <!-- Dirender dinamis oleh JS berdasarkan kategori yang dipilih -->
+            <!-- Dirender dinamis oleh JS -->
         </div>
 
         <!-- Judul Bagian & Info Filter -->
@@ -485,63 +484,63 @@
 
         <!-- Grid Produk -->
         <div class="product-grid" id="productGrid">
-            <div class="empty-state">Memuat data produk dari sistem backend excel...</div>
+            <div class="empty-state">Memuat data produk langsung dari Google Sheets...</div>
         </div>
     </main>
 
     <!-- Footer -->
     <footer>
         <div class="container">
-            <p>&copy; 2026 <span>Raden Store</span></p>
+            <p>&copy; 2026 <span>Raden Store</span>. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Script JavaScript Backend Loader & Logic -->
+    <!-- Script Google Sheets CSV Parser & Render Logic -->
     <script>
-        // Konfigurasi Nomor WhatsApp Tujuan (Ganti dengan nomor Anda, format internasional tanpa 0 di depan)
-        const WHATSAPP_NUMBER = "6281234567890";
+        // Ganti dengan nomor WhatsApp tujuan Anda (format internasional tanpa angka 0 di depan, contoh: 6281234567890)
+        const WHATSAPP_NUMBER = "6285888223922";
+        
+        // Link CSV Google Sheets Anda yang sudah berformat /pub?output=csv
+        const GOOGLESHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTpzNcrG3J0JC5XfJXF-z2XqzN584mJthMwNa4LAkW2TWp9nBocaBUZdL3RhT0_xd9iyoWZZMKvqs5S/pub?output=csv";
 
         let productsData = [];
         let currentCategory = "Semua";
         let currentSubCategory = "Semua";
         let searchQuery = "";
 
-        // Format angka ke Rupiah
+        // Format angka ke mata uang Rupiah
         function formatRupiah(number) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
         }
 
-        // Fungsi Load File Excel di Backend/Local (Tidak public upload UI)
-        async function loadBackendExcel() {
+        // Fungsi Mengambil Data dari Google Sheets CSV secara Live
+        async function loadGoogleSheetsData() {
             try {
-                const response = await fetch('produk.xlsx');
-                if (!response.ok) throw new Error('Gagal memuat file excel backend.');
-                const buffer = await response.arrayBuffer();
-                const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+                const response = await fetch(GOOGLESHEETS_CSV_URL);
+                if (!response.ok) throw new Error('Gagal terhubung ke Google Sheets.');
+                const csvText = await response.text();
+                
+                // Parse CSV teks menggunakan SheetJS
+                const workbook = XLSX.read(csvText, { type: 'string' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Konversi sheet ke JSON
                 productsData = XLSX.utils.sheet_to_json(worksheet);
                 initApp();
             } catch (error) {
-                console.warn('Gagal membaca produk.xlsx otomatis, menggunakan data cadangan (fallback).', error);
-                // Fallback data jika file belum terbaca di server lokal
-                productsData = [
-                    { "Kategori Utama": "Pulsa", "Sub Kategori": "Telkomsel", "Nama Produk": "Telkomsel 10.000", "Harga": 11500, "Deskripsi": "Pulsa Reguler Telkomsel masa aktif bertambah.", "Stok": "Tersedia" },
-                    { "Kategori Utama": "Pulsa", "Sub Kategori": "IM3", "Nama Produk": "IM3 Ooredoo 10.000", "Harga": 11200, "Deskripsi": "Pulsa Reguler IM3 Ooredoo.", "Stok": "Tersedia" },
-                    { "Kategori Utama": "Pulsa", "Sub Kategori": "XL", "Nama Produk": "XL Axiata 10.000", "Harga": 11300, "Deskripsi": "Pulsa Reguler XL Axiata.", "Stok": "Tersedia" },
-                    { "Kategori Utama": "Item Game", "Sub Kategori": "Mobile Legends", "Nama Produk": "Mobile Legends 86 Diamonds", "Harga": 20500, "Deskripsi": "Proses cepat via ID & Server.", "Stok": "Tersedia" }
-                ];
-                initApp();
+                console.error('Error loading Google Sheets:', error);
+                document.getElementById("productGrid").innerHTML = `
+                    <div class="empty-state">
+                        <h3 style="color: #dc2626; margin-bottom: 8px;">Gagal Memuat Data Produk</h3>
+                        <p>Pastikan Google Sheets sudah dipublikasikan ke web dalam format CSV.</p>
+                    </div>`;
             }
         }
 
-        // Render Sub-kategori / Provider Chips berdasarkan Kategori Utama yang aktif
+        // Render Sub-kategori Chips berdasarkan Kategori Utama yang dipilih
         function renderSubCategories() {
             const subBar = document.getElementById("subCategoryBar");
             
-            // Ambil sub kategori unik yang sesuai dengan kategori utama saat ini
             let availableSub = [];
             if (currentCategory === "Semua") {
                 availableSub = [...new Set(productsData.map(item => item["Sub Kategori"]).filter(Boolean))];
@@ -552,7 +551,6 @@
                     .filter(Boolean))];
             }
 
-            // Jika tidak ada sub kategori, sembunyikan bar
             if (availableSub.length === 0) {
                 subBar.style.display = "none";
                 return;
@@ -568,7 +566,6 @@
 
             subBar.innerHTML = html;
 
-            // Pasang event listener ke chip sub-kategori baru
             document.querySelectorAll(".sub-chip").forEach(chip => {
                 chip.addEventListener("click", (e) => {
                     document.querySelectorAll(".sub-chip").forEach(c => c.classList.remove("active"));
@@ -579,7 +576,7 @@
             });
         }
 
-        // Render Produk Utama
+        // Render Produk ke Grid Halaman
         function renderProducts() {
             const grid = document.getElementById("productGrid");
             const totalCountEl = document.getElementById("totalCount");
@@ -587,7 +584,6 @@
 
             totalCountEl.textContent = productsData.length;
 
-            // Filter data berdasarkan Kategori Utama, Sub Kategori, dan Search Query
             const filtered = productsData.filter(item => {
                 const catMatch = (currentCategory === "Semua") || (String(item["Kategori Utama"]).trim().toLowerCase() === currentCategory.toLowerCase());
                 const subMatch = (currentSubCategory === "Semua") || (String(item["Sub Kategori"]).trim().toLowerCase() === currentSubCategory.toLowerCase());
@@ -600,7 +596,7 @@
             productCountInfoEl.textContent = `Menampilkan ${filtered.length} dari ${productsData.length} produk`;
 
             if (filtered.length === 0) {
-                grid.innerHTML = `<div class="empty-state"><h3>Produk tidak ditemukan</h3><p>Coba pilih provider lain atau gunakan kata kunci pencarian yang berbeda.</p></div>`;
+                grid.innerHTML = `<div class="empty-state"><h3>Produk tidak ditemukan</h3><p>Coba pilih provider lain atau ubah kata kunci pencarian Anda.</p></div>`;
                 return;
             }
 
@@ -613,14 +609,14 @@
                 const desc = item["Deskripsi"] || "Tidak ada deskripsi.";
                 const stock = item["Stok"] || "Tersedia";
 
-                // Pesan kustom otomatis untuk WhatsApp
+                // Format pesan WhatsApp kustom sesuai produk yang diklik
                 const waMessage = encodeURIComponent(`Halo Kak, saya ingin memesan produk berikut:
 
 📦 *${name}*
 🏷️ Kategori: ${mainCat} (${subCat})
 💰 Harga: ${formatRupiah(price)}
 
-Mohon instruksi selanjutnya. Terima kasih!`);
+Mohon petunjuk selanjutnya. Terima kasih!`);
                 const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMessage}`;
 
                 html += `
@@ -650,18 +646,17 @@ Mohon instruksi selanjutnya. Terima kasih!`);
             grid.innerHTML = html;
         }
 
-        // Inisialisasi Event Listener Utama
+        // Inisialisasi Event Listener
         function initApp() {
             renderSubCategories();
             renderProducts();
 
-            // Tab Kategori Utama
             document.querySelectorAll(".tab-btn").forEach(btn => {
                 btn.addEventListener("click", (e) => {
                     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
                     e.target.classList.add("active");
                     currentCategory = e.target.getAttribute("data-category");
-                    currentSubCategory = "Semua"; // Reset sub kategori ketika kategori utama diganti
+                    currentSubCategory = "Semua"; 
                     
                     document.getElementById("activeCategoryTitle").textContent = currentCategory === "Semua" ? "Semua Katalog Produk" : `Kategori: ${currentCategory}`;
                     
@@ -670,15 +665,13 @@ Mohon instruksi selanjutnya. Terima kasih!`);
                 });
             });
 
-            // Search Bar
             document.getElementById("searchInput").addEventListener("input", (e) => {
                 searchQuery = e.target.value;
                 renderProducts();
             });
         }
 
-        // Jalankan saat dokumen siap
-        document.addEventListener("DOMContentLoaded", loadBackendExcel);
+        document.addEventListener("DOMContentLoaded", loadGoogleSheetsData);
     </script>
 </body>
 </html>
